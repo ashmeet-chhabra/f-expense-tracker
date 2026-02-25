@@ -7,8 +7,7 @@ from datetime import date
 from typing import List
 import json
 import os
-
-FILE_NAME = 'data.json'
+from database import init_db, get_connection
 
 class ExpenseCreate(BaseModel):
     description: str
@@ -22,26 +21,20 @@ class Expense(BaseModel):
 
 app = FastAPI()
 
-def load_expenses():
-    if not os.path.exists(FILE_NAME):
-        return []
+@app.on_event("startup")
+def startup():
+    init_db()
 
-    with open(FILE_NAME, 'r') as f:
-        try:
-            expenses = json.load(f)
-            return expenses
-        except json.JSONDecodeError:
-            return []
+def fetch_all_expenses():
+    conn = get_connection()
+    cursor = conn.cursor()
 
-def save_expenses(expenses):
-    with open(FILE_NAME, 'w') as f:
-        json.dump(expenses, f, indent=4)
+    cursor.execute("SELECT * FROM expenses")
+    rows = cursor.fetchall()
 
-def get_next_id(expenses):
-    if not expenses:
-        return 1
-    next_id = max(expense['id'] for expense in expenses) + 1
-    return next_id
+    conn.close()
+
+    return [dict(row) for row in rows]
 
 @app.get('/')
 def root():
@@ -49,11 +42,11 @@ def root():
 
 @app.get('/expenses', response_model=List[Expense])
 def list_expenses():
-    return load_expenses()
+    return fetch_all_expenses()
 
 @app.get('/summary')
 def summarize_expenses(month: int | None=None):
-    expenses = load_expenses()
+    expenses = fetch_all_expenses()
     if month is not None:
         if month < 1 or month > 12:
             raise HTTPException(status_code=400, detail='Month must be between 1 and 12')
@@ -69,38 +62,59 @@ def summarize_expenses(month: int | None=None):
 
 @app.post('/expenses', response_model=Expense, status_code=201)
 def add_expense(expense: ExpenseCreate):    
-    expenses = load_expenses()
-    expense_id = get_next_id(expenses)
 
-    new_expense = {
-        "id": expense_id,
-        "description": expense.description,
-        "amount": expense.amount,
-        "date": str(datetime.now().date())
-    }
+    conn = get_connection()
+    cursor = conn.cursor()
 
-    expenses.append(new_expense)
-    save_expenses(expenses)
+    cursor.execute(
+        "INSERT INTO expenses (description, amount, date) VALUES (?, ?, DATE('now))",
+        (expense.description, expense.amount)
+    )
 
-    return new_expense
+    conn.commit()
+
+    expense_id = cursor.lastrowid
+
+    cursor.execute("SELECT * FROM expenses WHERE id = ?", (expense_id))
+    row = cursor.fetchone()
+
+    conn.close()
+    
+    return dict(row)
 
 @app.delete('/expenses/{expense_id}', status_code=204)
 def delete_expense(expense_id: int):
-    expenses = load_expenses()
-    for expense in expenses:
-        if expense['id'] == expense_id:
-            expenses.remove(expense)
-            save_expenses(expenses)
-            return
-    raise HTTPException(status_code=404, detail='Expense not found')
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM expenses WHERE ? = expense_id", expense_id)
+    conn.commit()
+
+    if cursor.rowcount == 0:
+        conn.close()
+        raise HTTPException(status_code=404, details="Expense not found")
+
+    conn.close()
 
 @app.patch('/expenses/{expense_id}', response_model=Expense)
+#replace patch
 def update_expense(expense_id: int, expense: ExpenseCreate):
-    expenses = load_expenses()
-    for e in expenses:
-        if e['id'] == expense_id:
-            e['description'] = expense.description
-            e['amount'] = expense.amount
-            save_expenses(expenses)
-            return e
-    raise HTTPException(status_code=404, detail='Expense not found')
+    conn = get_connection()
+    cur = conn.cur()
+
+    cur.execute("UPDATE expenses SET description = ?, amount = ? WHERE id = ?",
+                (expense.description, expense.amount, expense_id)
+    )
+    conn.commit()
+
+    if cur.rowcount == 0:
+        conn.close()
+        raise HTTPException(status_code=404, detail='Expense not found')
+    
+    cur.execute("SELECT * FROM expenses WHERE ? = expense_id", expense_id)
+    row = cur.fetchone()
+    
+    conn.close()
+
+    return dict(row)
