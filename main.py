@@ -1,12 +1,7 @@
-from fastapi import FastAPI
-from fastapi import HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from pydantic import Field
-from datetime import datetime
-from datetime import date
 from typing import List
-import json
-import os
 from database import init_db, get_connection
 
 class ExpenseCreate(BaseModel):
@@ -45,20 +40,29 @@ def list_expenses():
     return fetch_all_expenses()
 
 @app.get('/summary')
-def summarize_expenses(month: int | None=None):
-    expenses = fetch_all_expenses()
+def summarize_expenses(month: int | None = Query(None, ge=1, le=12)):
+
+    conn = get_connection()
+    cur = conn.cursor()
+
     if month is not None:
-        if month < 1 or month > 12:
-            raise HTTPException(status_code=400, detail='Month must be between 1 and 12')
-        filtered_total = sum(
-            expense['amount']
-            for expense in expenses
-            if date.fromisoformat(expense['date']).month == month
+        cur.execute(
+            """
+            SELECT SUM(amount) AS total
+            FROM expenses
+            WHERE strftime('%m', date) = ?
+            """,
+            (f'{month:02d}',)
         )
-        return {'month': month, 'total': filtered_total}
     else:
-        total_expense = sum(expense['amount'] for expense in expenses)
-        return {'total': total_expense}
+        cur.execute("SELECT SUM(amount) AS total FROM expenses")
+
+    row = cur.fetchone()
+    conn.close()
+
+    total = row["total"] if row["total"] is not None else 0
+
+    return {"month": month, "total": total} if month is not None else {"total": total}
 
 @app.post('/expenses', response_model=Expense, status_code=201)
 def add_expense(expense: ExpenseCreate):    
@@ -67,7 +71,7 @@ def add_expense(expense: ExpenseCreate):
     cursor = conn.cursor()
 
     cursor.execute(
-        "INSERT INTO expenses (description, amount, date) VALUES (?, ?, DATE('now))",
+        "INSERT INTO expenses (description, amount, date) VALUES (?, ?, DATE('now'))",
         (expense.description, expense.amount)
     )
 
@@ -75,7 +79,7 @@ def add_expense(expense: ExpenseCreate):
 
     expense_id = cursor.lastrowid
 
-    cursor.execute("SELECT * FROM expenses WHERE id = ?", (expense_id))
+    cursor.execute("SELECT * FROM expenses WHERE id = ?", (expense_id,))
     row = cursor.fetchone()
 
     conn.close()
@@ -88,12 +92,12 @@ def delete_expense(expense_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("DELETE FROM expenses WHERE ? = expense_id", expense_id)
+    cursor.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
     conn.commit()
 
     if cursor.rowcount == 0:
         conn.close()
-        raise HTTPException(status_code=404, details="Expense not found")
+        raise HTTPException(status_code=404, detail="Expense not found")
 
     conn.close()
 
@@ -101,7 +105,7 @@ def delete_expense(expense_id: int):
 #replace patch
 def update_expense(expense_id: int, expense: ExpenseCreate):
     conn = get_connection()
-    cur = conn.cur()
+    cur = conn.cursor()
 
     cur.execute("UPDATE expenses SET description = ?, amount = ? WHERE id = ?",
                 (expense.description, expense.amount, expense_id)
@@ -112,7 +116,7 @@ def update_expense(expense_id: int, expense: ExpenseCreate):
         conn.close()
         raise HTTPException(status_code=404, detail='Expense not found')
     
-    cur.execute("SELECT * FROM expenses WHERE ? = expense_id", expense_id)
+    cur.execute("SELECT * FROM expenses WHERE id = ?", (expense_id,))
     row = cur.fetchone()
     
     conn.close()
