@@ -1,24 +1,24 @@
-import sqlite3
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-DB_NAME = 'expenses.db'
+DATABASE_URL = 'sqlite:///./expenses.db'
 
-def get_connection():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={'check_same_thread': False}
+)
 
-def init_db():
-    conn = get_connection()
-    cursor  = conn.cursor()
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine
+)
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS expenses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            description TEXT NOT NULL,
-            amount INTEGER NOT NULL CHECK(amount >= 0),
-            date TEXT NOT NULL
-        )
-    """)
+Base = declarative_base() 
 
-    conn.commit()
-    conn.close()
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
