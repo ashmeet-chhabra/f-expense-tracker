@@ -13,4 +13,17 @@ class ExpenseResponse(ExpenseBase):
     date: date
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+class UserCreate(BaseModel):
+    name: str | None = None
+    email: str
+    password: str
+
+class UserResponse(BaseModel):
+    id: int
+    name: str
+    email: str
+
+    class Config:
+        from_attributes = True
