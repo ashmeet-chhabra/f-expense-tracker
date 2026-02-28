@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from database import get_db
-from models import ExpenseModel
+from models import ExpenseModel, UserModel
 from schemas import ExpenseCreate, ExpenseResponse
+from deps import get_current_user 
 
 router = APIRouter(
     prefix = "/expenses",
@@ -13,9 +14,15 @@ router = APIRouter(
 )
 
 @router.get('/', response_model=List[ExpenseResponse])
-def list_expenses(db = Depends(get_db)):
-    return db.query(ExpenseModel).all()
+def list_expenses(
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):
+    return db.query(ExpenseModel).filter(
+        ExpenseModel.user_id == current_user.id
+    ).all()
 
+# protect routes
 @router.get('/summary')
 def summarize_expenses(month: int | None = Query(None, ge=1, le=12), db: Session = Depends(get_db)):
 
@@ -33,11 +40,16 @@ def summarize_expenses(month: int | None = Query(None, ge=1, le=12), db: Session
     return {"month": month, "total": total} if month is not None else {"total": total}
 
 @router.post('/', response_model=ExpenseResponse, status_code=201)
-def add_expense(expense: ExpenseCreate, db: Session = Depends(get_db)):    
+def add_expense(
+    expense: ExpenseCreate,
+    db: Session = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user)
+):    
 
     db_expense = ExpenseModel(
          description = expense.description,
          amount = expense.amount
+         user_id = current_user.id
     )
 
     db.add(db_expense)
