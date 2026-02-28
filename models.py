@@ -11,6 +11,7 @@ class ExpenseModel(Base):
     description = Column(String, nullable=False)
     amount = Column(Integer, nullable=False)
     date = Column(Date, default=date.today)
+    category = Column(String, default="Miscellaneous")
 
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("UserModel", back_populates="expenses")

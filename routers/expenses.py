@@ -82,6 +82,7 @@ def add_expense(
     db_expense = ExpenseModel(
          description = expense.description,
          amount = expense.amount,
+         category  = expense.category,
          user_id = current_user.id
     )
 
@@ -127,6 +128,7 @@ def update_expense(
     
     db_expense.description = expense.description
     db_expense.amount = expense.amount
+    db_expense.category = expense.category
 
     db.commit()
     db.refresh(db_expense)
