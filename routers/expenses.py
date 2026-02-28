@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, extract
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Literal
 from datetime import date, timedelta, timezone
 
 from database import get_db
@@ -14,9 +14,10 @@ router = APIRouter(
     tags = ["Expenses"]
 )
 
+# todo: validate date
 @router.get('/', response_model=List[ExpenseResponse])
 def list_expenses(
-    date_filter: str | None = None,
+    date_filter: Literal["week", "month", "3months"] | None = None,
     start: date | None = None,
     end: date | None = None,
     db: Session = Depends(get_db),
@@ -36,13 +37,16 @@ def list_expenses(
                 start = end - timedelta(days=30)
             case '3months':
                 start = end - timedelta(days=90)
-            case _: raise HTTPException(status_code=400, detail="Invalid date filter value")
 
     if start and end:
         query = query.filter(
-            ExpenseModel.date <= end,
-            ExpenseModel.date >= start
+            ExpenseModel.date >= start,
+            ExpenseModel.date <= end
         )
+    elif start and not end:
+        query = query.filter(ExpenseModel.date >= start)
+    elif not start and end:
+        query = query.filter(ExpenseModel.date <= end)  
 
     return query.all()
 
