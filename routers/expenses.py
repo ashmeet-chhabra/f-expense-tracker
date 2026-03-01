@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, extract
 from sqlalchemy.orm import Session
 from typing import List, Literal
-from datetime import date, timedelta, timezone
+from datetime import date, timedelta
 
 from database import get_db
-from models import ExpenseModel, UserModel
-from schemas import ExpenseCreate, ExpenseResponse
+from models import ExpenseModel, UserModel, CategoryEnum
+from schemas import ExpenseCreate, ExpenseResponse, ExpensePatch
 from deps import get_current_user 
 
 router = APIRouter(
@@ -18,6 +18,7 @@ router = APIRouter(
 @router.get('/', response_model=List[ExpenseResponse])
 def list_expenses(
     date_filter: Literal["week", "month", "3months"] | None = None,
+    category: CategoryEnum | None = None,
     start: date | None = None,
     end: date | None = None,
     db: Session = Depends(get_db),
@@ -28,6 +29,17 @@ def list_expenses(
             ExpenseModel.user_id == current_user.id
         )
     
+    if category:
+        query = query.filter(
+            ExpenseModel.category == category 
+        )
+    
+    if date_filter and (start or end):
+        raise HTTPException(
+            status_code=400,
+            detail="Use either range filter or start/end, not both"
+        )
+
     if date_filter:
         end = date.today()
         match date_filter:
@@ -43,10 +55,6 @@ def list_expenses(
             ExpenseModel.date >= start,
             ExpenseModel.date <= end
         )
-    elif start and not end:
-        query = query.filter(ExpenseModel.date >= start)
-    elif not start and end:
-        query = query.filter(ExpenseModel.date <= end)  
 
     return query.all()
 
@@ -117,7 +125,7 @@ def delete_expense(
 @router.patch('/{expense_id}', response_model=ExpenseResponse)
 def update_expense(
     expense_id: int,
-    expense: ExpenseCreate,
+    expense: ExpensePatch,
     db: Session = Depends(get_db),
     current_user: UserModel = Depends(get_current_user)
 ):
@@ -130,9 +138,12 @@ def update_expense(
     if not db_expense:
         raise HTTPException(status_code=404, detail='Expense not found')
     
-    db_expense.description = expense.description
-    db_expense.amount = expense.amount
-    db_expense.category = expense.category
+    if expense.description is not None:
+        db_expense.description = expense.description
+    if expense.amount is not None:
+        db_expense.amount = expense.amount
+    if expense.category is not None:
+        db_expense.category = expense.category
 
     db.commit()
     db.refresh(db_expense)

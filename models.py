@@ -1,8 +1,18 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum as SqlEnum
 from sqlalchemy.orm import relationship
 from datetime import date
+from enum import Enum
 
 from database import Base
+
+class CategoryEnum(str, Enum):
+    groceries = "Groceries"
+    leisure = "Leisure"
+    electronics = "Electronics"
+    utilities = "Utilities"
+    clothing = "Clothing"
+    health = "Health"
+    others = "Others"
 
 class ExpenseModel(Base):
     __tablename__ = "expenses"
@@ -11,7 +21,7 @@ class ExpenseModel(Base):
     description = Column(String, nullable=False)
     amount = Column(Integer, nullable=False)
     date = Column(Date, default=date.today)
-    category = Column(String, default="Miscellaneous")
+    category = Column(SqlEnum(CategoryEnum), nullable=False)
 
     user_id = Column(Integer, ForeignKey("users.id"))
     user = relationship("UserModel", back_populates="expenses")
