@@ -27,7 +27,7 @@ def get_current_user(
         raise credentials_exception
     
     user = db.query(UserModel).filter(
-        UserModel.id == user_id
+        UserModel.id == int(user_id)
     ).first()
 
     if user is None:
