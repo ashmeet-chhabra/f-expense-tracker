@@ -55,6 +55,11 @@ def list_expenses(
             ExpenseModel.date >= start,
             ExpenseModel.date <= end
         )
+    elif start:
+        query = query.filter(ExpenseModel.date >= start)
+    elif end:
+        query = query.filter(ExpenseModel.date <= end)
+
 
     return query.all()
 
