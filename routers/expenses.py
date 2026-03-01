@@ -14,7 +14,6 @@ router = APIRouter(
     tags = ["Expenses"]
 )
 
-# todo: validate date
 @router.get('/', response_model=List[ExpenseResponse])
 def list_expenses(
     date_filter: Literal["week", "month", "3months"] | None = None,
