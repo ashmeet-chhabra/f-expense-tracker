@@ -1,8 +1,11 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 
 from database import engine, Base
 from routers import expenses, users
+
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
