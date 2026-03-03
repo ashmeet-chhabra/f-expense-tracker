@@ -4,10 +4,10 @@ from sqlalchemy.orm import Session
 from typing import List, Literal
 from datetime import date, timedelta
 
-from database import get_db
-from models import ExpenseModel, UserModel, CategoryEnum
-from schemas import ExpenseCreate, ExpenseResponse, ExpensePatch
-from deps import get_current_user 
+from app.database import get_db
+from app.models import ExpenseModel, UserModel, CategoryEnum
+from app.schemas import ExpenseCreate, ExpenseResponse, ExpensePatch
+from app.deps import get_current_user 
 
 router = APIRouter(
     prefix = "/expenses",

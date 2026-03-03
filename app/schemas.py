@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import date
-from models import CategoryEnum
+
+from app.models import CategoryEnum
 
 class ExpenseBase(BaseModel):
     description: str
@@ -13,10 +14,9 @@ class ExpenseCreate(ExpenseBase):
 class ExpenseResponse(ExpenseBase):
     id: int
     date: date
-
-    class Config:
-        from_attributes = True
-
+    
+    model_config = ConfigDict(from_attributes = True) 
+    
 class ExpensePatch(BaseModel):
     description: str | None = None
     amount: int | None = Field(None, ge=0)
@@ -33,5 +33,4 @@ class UserResponse(UserBase):
     name: str
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes = True) 

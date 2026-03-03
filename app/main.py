@@ -2,8 +2,8 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
-from database import engine, Base
-from routers import expenses, users
+from app.database import engine, Base
+from app.routers import expenses, users
 
 load_dotenv()
 

@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from datetime import date
 from enum import Enum
 
-from database import Base
+from app.database import Base
 
 class CategoryEnum(str, Enum):
     groceries = "Groceries"

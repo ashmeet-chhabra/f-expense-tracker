@@ -3,8 +3,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 
-from database import Base, get_db
-from main import app
+from app.database import Base, get_db
+from app.main import app
 
 TEST_DATABASE_URL = "sqlite:///./test.db"
 
@@ -13,7 +13,7 @@ test_engine = create_engine(
         connect_args={"check_same_thread": False}
     )
 
-# Create table once for the whole test session 
+# Create table once for the whole test session (pytests's session not sqlalchemy)
 @pytest.fixture(scope="session", autouse=True)
 def setup_database():
     Base.metadata.create_all(bind=test_engine)
@@ -35,7 +35,7 @@ def db_session():
     connection.close() # undo all changes for the test made
 
 # test client that uses the isolated session instead of the real DB
-@pytest.fixture
+@pytest.fixture()
 def client(db_session):
     def _override_get_db():
         yield db_session
