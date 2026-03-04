@@ -10,7 +10,7 @@ def test_register_user(client):
     assert "password" not in data
     assert "hashed_password" not in data
 
-def test_duplicate_registration(client):
+def test_duplicate_email_registration(client):
     user = {"name":"Test","email":"Test123@gmail.com","password":"Test111"}
     client.post("/users/register", json=user)
     response = client.post("/users/register", json=user)

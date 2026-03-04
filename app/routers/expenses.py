@@ -14,7 +14,7 @@ router = APIRouter(
     tags = ["Expenses"]
 )
 
-@router.get('/', response_model=List[ExpenseResponse])
+@router.get('', response_model=List[ExpenseResponse])
 def list_expenses(
     date_filter: Literal["week", "month", "3months"] | None = None,
     category: CategoryEnum | None = None,
@@ -88,7 +88,7 @@ def summarize_expenses(
 
     return {"month": month, "total": total} if month is not None else {"total": total}
 
-@router.post('/', response_model=ExpenseResponse, status_code=201)
+@router.post('', response_model=ExpenseResponse, status_code=201)
 def add_expense(
     expense: ExpenseCreate,
     db: Session = Depends(get_db),
