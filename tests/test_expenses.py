@@ -77,10 +77,12 @@ def test_users_cannot_see_each_others_expenses(client):
     assert response.json() == []
 
 def test_delete_expense(auth_client):
-    pass
-def test_summary_endpoint(auth_client):
-    pass
-def test_invalid_category(auth_client):
-    pass
-def test_expense_validation(auth_client):
-    pass
+    expense = {
+        "description": "Test description",
+        "amount": 100,
+        "category": "Health"
+    }
+    id = auth_client.post('/expenses', json=expense).json()["id"]
+
+    response = auth_client.delete(f'/expenses/{id}')
+    assert response.status_code == 204
