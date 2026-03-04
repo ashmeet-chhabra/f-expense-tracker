@@ -5,3 +5,6 @@ expenses.db
 test.db
 .env
 .vscode/
+htmlcov/
+.coverage
+.pytest_cache/

@@ -10,7 +10,7 @@ def test_register_user(client):
     assert "password" not in data
     assert "hashed_password" not in data
 
-def test_duplicate_email_registration(client):
+def test_register_duplicate_email(client):
     user = {"name":"Test","email":"Test123@gmail.com","password":"Test111"}
     client.post("/users/register", json=user)
     response = client.post("/users/register", json=user)
@@ -28,3 +28,19 @@ def test_login_success(client):
     assert response.status_code == 200
     assert "access_token" in response.json()
     assert response.json()["token_type"] == "bearer"
+
+def test_login_invalid_credentials(client):
+    user = {"name":"Test","email":"Test123@gmail.com","password":"Test111"}
+    client.post("/users/register", json=user)
+
+    user = {"username":"Test123@gmail.com","password":"Toast111"}
+    response = client.post("/users/login", data=user)
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid credentials"
+
+    user = {"username":"Toast123@gmail.com","password":"Test111"}
+    response = client.post("/users/login", data=user)
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid credentials"
